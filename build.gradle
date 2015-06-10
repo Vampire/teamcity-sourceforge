@@ -1,0 +1,61 @@
+/*
+ * Copyright 2015 Björn Kautler
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id "nebula.provided-base" version "2.2.2"
+}
+
+apply plugin: 'java'
+
+version '1.0.0'
+description 'Integrate SourceForge into TeamCity'
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'http://repository.jetbrains.com/all'
+    }
+}
+
+dependencies {
+    provided 'org.jetbrains.teamcity:server-api:9.0.3'
+    // needed for EhCacheUtil in the constructor of AbstractIssueFetcher
+    provided 'org.jetbrains.teamcity.internal:server:9.0.3'
+}
+
+compileJava.options.encoding = 'UTF-8'
+sourceCompatibility = '1.6'
+archivesBaseName = 'sourceforge'
+
+task zip(type: Zip, dependsOn: jar) {
+    description 'Builds the ZIP archive to be uploaded to TeamCity'
+    inputs.property 'version', version
+    inputs.property 'description', project.description
+    into('server') {
+        from jar
+        from configurations.runtime.files - configurations.provided.files
+    }
+    from('resources/teamcity-plugin.xml') {
+        filter ReplaceTokens, tokens: [VERSION: version, DESCRIPTION: project.description]
+    }
+}
+defaultTasks 'zip'
+
+artifacts {
+    archives zip
+}
